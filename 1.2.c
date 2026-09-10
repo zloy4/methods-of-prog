@@ -1,76 +1,52 @@
 #include <stdio.h>
+int get_length(long long num) {
+    if (num == 0) return 1;
+    int len = 0;
+    while (num > 0) {
+        len++;
+        num /= 10;
+    }
+    return len;
+}
 
-unsigned long long karatsuba(unsigned long long x,
-                             unsigned long long y)
-{
-    unsigned long long a1, a0;
-    unsigned long long b1, b0;
-    unsigned long long p1, p2, p3;
-    unsigned long long middle;
-    unsigned long long power;
-    int n = 0;
-    int m;
+long long power_of_10(int power) {
+    long long res = 1;
+    for (int i = 0; i < power; i++) {
+        res *= 10;
+    }
+    return res;
+}
 
-    if (x < 10 || y < 10)
-    {
+long long karatsuba(long long x, long long y) {
+    if (x < 10 || y < 10) {
         return x * y;
     }
 
-    unsigned long long temp = x;
+    int len_x = get_length(x);
+    int len_y = get_length(y);
+    int md = (len_x > len_y ? len_x : len_y) / 2;
 
-    while (temp > 0)
-    {
-        n++;
-        temp /= 10;
-    }
+    long long multiplier = power_of_10(md);
 
-    if (n % 2 != 0)
-    {
-        n++;
-    }
+    long long levx = x / multiplier;
+    long long pravx = x % multiplier; 
 
-    m = n / 2;
+    long long levy = y / multiplier;
+    long long pravy = y % multiplier;
 
-    power = 1;
+    long long qw = karatsuba(pravx, pravy);
+    long long er = karatsuba(levx, levy);
+    long long er_qw = karatsuba(levx + pravx, levy + pravy);
 
-    for (int i = 0; i < m; i++)
-    {
-        power *= 10;
-    }
-
-    a1 = x / power;
-    a0 = x % power;
-
-    b1 = y / power;
-    b0 = y % power;
-
-    p1 = karatsuba(a1, b1);
-    p2 = karatsuba(a0, b0);
-
-    p3 = karatsuba(a1 + a0, b1 + b0);
-
-    middle = p3 - p1 - p2;
-
-    return p1 * power * power
-           + middle * power
-           + p2;
+    return qw + (er_qw - er - qw) * multiplier + er * power_of_10(md * 2);
 }
 
-int main(void)
-{
-    unsigned long long a;
-    unsigned long long b;
-    unsigned long long result;
-
-    printf("Введите первое число: ");
-    scanf("%llu", &a);
-
-    printf("Введите второе число: ");
-    scanf("%llu", &b);
-
-    result = karatsuba(a, b);
-
-    printf("Результат: %llu\n", result);
-
+int main() {
+    long long x = 123;
+    long long y = 123;
+    
+    long long result = karatsuba(x, y);
+    printf("Multiplication result: %lld\n", result);
+    
     return 0;
 }
