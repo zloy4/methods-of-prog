@@ -1,200 +1,100 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <complex.h>
 
-#define PI 3.14159265358979323846
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
+void fft(double _Complex *a, int n, int invert) {
+    if (n <= 1) return;
 
-void fft(double complex *a, int n, int invert)
-{
-    int i;
-    int j = 0;
+    double _Complex *even = malloc(n / 2 * sizeof(double _Complex));
+    double _Complex *uneven = malloc(n / 2 * sizeof(double _Complex));
 
-    for (i = 1; i < n; i++)
-    {
-        int bit = n >> 1;
-
-        while (j & bit)
-        {
-            j ^= bit;
-            bit >>= 1;
-        }
-
-        j ^= bit;
-
-        if (i < j)
-        {
-            double complex temp = a[i];
-            a[i] = a[j];
-            a[j] = temp;
-        }
+    for (int i = 0; i < n / 2; i++) {
+        even[i] = a[i * 2];
+        uneven[i] = a[i * 2 + 1];
     }
 
-    for (int length = 2; length <= n; length *= 2)
-    {
-        double angle = 2.0 * PI / length;
+    fft(even, n / 2, invert);
+    fft(uneven, n / 2, invert);
 
-        if (invert)
-        {
-            angle = -angle;
-        }
+    double ang = 2 * M_PI / n * (invert ? 1 : -1);
+    double _Complex w = 1;
+    double _Complex wn = cexp(ang * I);
 
-        double complex w_length =
-            cos(angle) + I * sin(angle);
-
-        for (i = 0; i < n; i += length)
-        {
-            double complex w = 1.0 + 0.0 * I;
-
-            for (j = 0; j < length / 2; j++)
-            {
-                double complex u = a[i + j];
-                double complex v =
-                    a[i + j + length / 2] * w;
-
-                a[i + j] = u + v;
-                a[i + j + length / 2] = u - v;
-
-                w *= w_length;
-            }
-        }
+    for (int i = 0; i < n / 2; i++) {
+        a[i] = even[i] + w * uneven[i];
+        a[i + n / 2] = even[i] - w * uneven[i];
+        w *= wn;
     }
 
-    if (invert)
-    {
-        for (i = 0; i < n; i++)
-        {
-            a[i] /= n;
-        }
-    }
+    free(even);
+    free(uneven);
 }
 
-
-void print_array(double complex *a, int n)
-{
-    for (int i = 0; i < n; i++)
-    {
-        printf("%.2f + %.2fi\n",
-               creal(a[i]),
-               cimag(a[i]));
-    }
-}
-
-
-void multiply_fft(const char *number1,
-                  const char *number2)
-{
-    int len1 = 0;
-    int len2 = 0;
-
-    while (number1[len1] != '\0')
-    {
-        len1++;
+void multiply_fft(const char* x, const char* y) {
+    int xlen = strlen(x);
+    int ylen = strlen(y);
+    int dlina = 1;
+    
+    while (dlina < xlen + ylen) {
+        dlina *= 2;
     }
 
-    while (number2[len2] != '\0')
-    {
-        len2++;
+    double _Complex *p = calloc(dlina, sizeof(double _Complex));
+    double _Complex *q = calloc(dlina, sizeof(double _Complex));
+
+    for (int k = 0; k < xlen; k++) {
+        p[k] = x[xlen - 1 - k] - '0';
+    }
+    for (int k = 0; k < ylen; k++) {
+        q[k] = y[ylen - 1 - k] - '0';
     }
 
-    int n = 1;
+    fft(p, dlina, 0);
+    fft(q, dlina, 0);
 
-    while (n < len1 + len2)
-    {
-        n *= 2;
+    double _Complex *c = calloc(dlina, sizeof(double _Complex));
+    for (int k = 0; k < dlina; k++) {
+        c[k] = p[k] * q[k];
     }
 
-    double complex *a =
-        calloc(n, sizeof(double complex));
+    fft(c, dlina, 1);
 
-    double complex *b =
-        calloc(n, sizeof(double complex));
-
-    if (a == NULL || b == NULL)
-    {
-        printf("Ошибка выделения памяти\n");
-        free(a);
-        free(b);
-        return;
+    int *ans = calloc(dlina + 1, sizeof(int));
+    for (int k = 0; k < dlina; k++) {
+        long long chisl = round(creal(c[k]) / dlina);
+        ans[k] += chisl;
+        ans[k + 1] += ans[k] / 10; 
+        ans[k] %= 10;              
     }
 
-    for (int i = 0; i < len1; i++)
-    {
-        a[i] = number1[len1 - 1 - i] - '0';
+    int max_len = dlina;
+    while (max_len > 1 && ans[max_len - 1] == 0) {
+        max_len--;
     }
 
-    for (int i = 0; i < len2; i++)
-    {
-        b[i] = number2[len2 - 1 - i] - '0';
+    printf("Multiplication result: ");
+    for (int k = max_len - 1; k >= 0; k--) {
+        printf("%d", ans[k]);
     }
-
-    fft(a, n, 0);
-    fft(b, n, 0);
-
-    for (int i = 0; i < n; i++)
-    {
-        a[i] *= b[i];
-    }
-
-    fft(a, n, 1);
-
-    long long *result =
-        calloc(n + 1, sizeof(long long));
-
-    if (result == NULL)
-    {
-        printf("Ошибка выделения памяти\n");
-        free(a);
-        free(b);
-        return;
-    }
-
-    for (int i = 0; i < n; i++)
-    {
-        result[i] = llround(creal(a[i]));
-    }
-
-    for (int i = 0; i < n; i++)
-    {
-        result[i + 1] += result[i] / 10;
-        result[i] %= 10;
-    }
-
-    int last = n;
-
-    while (last > 0 && result[last] == 0)
-    {
-        last--;
-    }
-
-    printf("Результат: ");
-
-    for (int i = last; i >= 0; i--)
-    {
-        printf("%lld", result[i]);
-    }
-
     printf("\n");
 
-    free(a);
-    free(b);
-    free(result);
+    free(p);
+    free(q);
+    free(c);
+    free(ans);
 }
 
-
-int main(void)
-{
-    char number1[1000];
-    char number2[1000];
-
-    printf("Введите первое число: ");
-    scanf("%999s", number1);
-
-    printf("Введите второе число: ");
-    scanf("%999s", number2);
-
-    multiply_fft(number1, number2);
-
+int main() {
+    const char* x = "123456789";
+    const char* y = "987654321";
+    
+    multiply_fft(x, y);
+    
     return 0;
 }
