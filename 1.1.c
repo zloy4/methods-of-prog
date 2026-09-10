@@ -1,108 +1,49 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 
-#define BASE 10000
-
-typedef struct {
-    int *digits;
-    int size;
-} BigNumber;
-
-BigNumber to_digits(const char *number) {
-    BigNumber result;
-
-    int length = strlen(number);
-    result.size = (length + 3) / 4;
-    result.digits = calloc(result.size, sizeof(int));
-
-    int index = 0;
-
-    for (int i = length; i > 0; i -= 4) {
-        int start = i - 4;
-
-        if (start < 0) {
-            start = 0;
+void multiply(const char* x, const char* y) {
+    int len_a = strlen(x);
+    int len_b = strlen(y);
+    
+    int* ans = (int*)calloc(len_a + len_b, sizeof(int));
+    
+    for (int i = 0; i < len_b; i++) {
+        int h = 0; 
+        int b_digit = y[len_b - 1 - i] - '0';
+        
+        for (int j = 0; j < len_a; j++) {
+            int a_digit = x[len_a - 1 - j] - '0';
+            
+            int q = a_digit * b_digit + h + ans[i + j];
+            
+            h = q / 10;
+            ans[i + j] = q % 10; 
         }
-
-        int block = 0;
-
-        for (int j = start; j < i; j++) {
-            block = block * 10 + (number[j] - '0');
+        
+        if (h > 0) {
+            ans[i + len_a] += h;
         }
-
-        result.digits[index] = block;
-        index++;
     }
-
-    return result;
-}
-
-void free_number(BigNumber number) {
-    free(number.digits);
-}
-
-void print_number(BigNumber number) {
-    int i = number.size - 1;
-
-    printf("%d", number.digits[i]);
-
-    for (i--; i >= 0; i--) {
-        printf("%04d", number.digits[i]);
+    
+    int max_len = len_a + len_b;
+    while (max_len > 1 && ans[max_len - 1] == 0) {
+        max_len--;
     }
-
+    
+    printf("Multiplication result: ");
+    for (int k = max_len - 1; k >= 0; k--) {
+        printf("%d", ans[k]);
+    }
     printf("\n");
+    
+    free(ans);
 }
-
-BigNumber multiply(BigNumber a, BigNumber b) {
-    BigNumber result;
-
-    result.size = a.size + b.size;
-    result.digits = calloc(result.size, sizeof(int));
-
-    for (int i = 0; i < a.size; i++) {
-        for (int j = 0; j < b.size; j++) {
-            result.digits[i + j] += a.digits[i] * b.digits[j];
-        }
-    }
-
-    for (int i = 0; i < result.size - 1; i++) {
-        int carry = result.digits[i] / BASE;
-
-        result.digits[i] %= BASE;
-        result.digits[i + 1] += carry;
-    }
-
-    while (result.size > 1 &&
-           result.digits[result.size - 1] == 0) {
-        result.size--;
-    }
-
-    return result;
-}
-
-
 int main() {
-    char a[10000];
-    char b[10000];
-
-    printf("Введите первое число: ");
-    scanf("%9999s", a);
-
-    printf("Введите второе число: ");
-    scanf("%9999s", b);
-
-    BigNumber x = to_digits(a);
-    BigNumber y = to_digits(b);
-
-    BigNumber result = multiply(x, y);
-
-    printf("Результат: ");
-    print_number(result);
-
-    free_number(x);
-    free_number(y);
-    free_number(result);
-
+    const char* num1 = "674";
+    const char* num2 = "123";
+    
+    multiply(num1, num2);
+    
     return 0;
 }
